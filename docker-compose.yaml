@@ -1,0 +1,242 @@
+services:
+  # === Python API Server ===
+  python-pytorch-api-server:
+    build:
+      context: .
+      target: python-api-server
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    ports:
+      - 8080:8080
+    volumes:
+      - ./data/:/app/data/
+    environment:
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+    depends_on:
+      migrate-postgresql:
+        condition: service_completed_successfully
+
+  python-onnx-api-server:
+    build:
+      context: .
+      target: python-api-server
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    ports:
+      - 8081:8080
+    volumes:
+      - ./data/:/app/data/
+    environment:
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - MODEL_PATH=data/model.onnx
+    depends_on:
+      migrate-postgresql:
+        condition: service_completed_successfully
+
+  # === Rust API Server ===
+  rust-api-server:
+    build:
+      context: .
+      target: rust-api-server
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    environment:
+      # rust use thread as worker, 
+      # so we can set it a bit higher than python
+      - WORKERS=16
+      - DB_URL=postgres://postgres:password@postgresql:5432/postgres
+    ports:
+      - 8082:8080
+    volumes:
+      - ./data/:/app/data/
+    depends_on:
+      migrate-postgresql:
+        condition: service_completed_successfully
+
+  python-pytorch-load-tester:
+    build:
+      context: .
+      target: python-load-tester
+    entrypoint: [
+      "uv",
+      "run",
+      "--package",
+      "python-load-tester",
+      "locust",
+      "-f",
+      "python-load-tester/main.py",
+      "--headless",
+      "--host",
+      "http://python-pytorch-api-server:8080",
+      "-u",
+      "10",
+      "-r",
+      "2",
+      "-t",
+      "3m",
+      "--csv",
+      "data/python-pytorch-load-tester-results.csv"
+    ]
+    volumes:
+      - ./data/:/app/data/
+    depends_on:
+      - python-pytorch-api-server
+
+  python-onnx-load-tester:
+    build:
+      context: .
+      target: python-load-tester
+    entrypoint: [
+      "uv",
+      "run",
+      "--package",
+      "python-load-tester",
+      "locust",
+      "-f",
+      "python-load-tester/main.py",
+      "--headless",
+      "--host",
+      "http://python-onnx-api-server:8080",
+      "-u",
+      "10",
+      "-r",
+      "2",
+      "-t",
+      "3m",
+      "--csv",
+      "data/python-onnx-load-tester-results.csv"
+    ]
+    volumes:
+      - ./data/:/app/data/
+    depends_on:
+      - python-onnx-api-server
+
+  rust-load-tester:
+    build:
+      context: .
+      target: python-load-tester
+    entrypoint: [
+      "uv",
+      "run",
+      "--package",
+      "python-load-tester",
+      "locust",
+      "-f",
+      "python-load-tester/main.py",
+      "--headless",
+      "--host",
+      "http://rust-api-server:8080",
+      "-u",
+      "10",
+      "-r",
+      "2",
+      "-t",
+      "3m",
+      "--csv",
+      "data/rust-load-tester-results.csv"
+    ]
+    volumes:
+      - ./data/:/app/data/
+    depends_on:
+      - rust-api-server
+
+  python-dump-feature-1:
+    build:
+      context: .
+      target: python-api-server
+    entrypoint: |
+      sh -c 'echo "Dumping features 1..." && \
+      export PYTHONPATH=/app/python-api-server && \
+      uv run --package python-api-server python3 python-api-server/scripts/dump_feature_1.py' && \
+      echo "Done"'
+    depends_on:
+      migrate-postgresql:
+        condition: service_completed_successfully
+    environment:
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./data/:/app/data/
+
+  python-dump-feature-2:
+    build:
+      context: .
+      target: python-api-server
+    entrypoint: |
+      sh -c 'echo "Dumping features 2..." && \
+      export PYTHONPATH=/app/python-api-server && \
+      uv run --package python-api-server python3 python-api-server/scripts/dump_feature_2.py' && \
+      echo "Done"'
+    depends_on:
+      migrate-postgresql:
+        condition: service_completed_successfully
+    environment:
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./data/:/app/data/
+
+  # === PostgreSQL Part ===
+  migrate-postgresql:
+    build:
+      context: .
+      target: python-api-server
+    entrypoint: |
+      sh -c 'echo "Migrating SQL..." && \
+      uv run --package python-api-server alembic upgrade head && \
+      echo "Done"'
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+
+  postgresql:
+    # ref: https://railway.com/deploy/0c4k7A
+    image: chikeozulumba/postgres-postgis-h3@sha256:3b8deb4ef4c614717e1d5a7b3c0669ed0bcd9d9254223691c0c33533276db2cf
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 2G
+    platform: linux/amd64
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./mnt/postgresql/:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

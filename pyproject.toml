@@ -1,0 +1,13 @@
+[project]
+description = ""
+name = "python-vs-rust-inference-api-server"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.ruff.lint]
+select = ["PL", "F", "I"]
+
+[tool.uv.workspace]
+members = ["python-*"]

@@ -1,0 +1,21 @@
+[package]
+name = "rust-api-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.99"
+async-trait = "0.1.89"
+candle-core = "0.9.1"
+candle-nn = "0.9.1"
+diesel = "2.2.12"
+diesel-async = { version = "0.6.1", features = ["postgres", "deadpool"] }
+dotenvy = "0.15.7"
+env_logger = "0.11.8"
+log = "0.4.28"
+ntex = { version = "2.16.0", features = ["tokio"] }
+openssl-sys = { version = "0.9.109", features = ["vendored"] }
+postgis_diesel = "3.0.1"
+pq-sys = { version = "0.7.2", features = ["bundled"] }
+serde = { version = "1.0.221", features = ["serde_derive"] }
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "test-util", "tokio-macros"] }

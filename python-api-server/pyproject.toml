@@ -1,0 +1,28 @@
+[project]
+name = "python-api-server"
+version = "0.1.0"
+description = "API server for serving the model"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.16.5",
+    "confluent-kafka>=2.11.1",
+    "fastapi[standard]>=0.116.1",
+    "geoalchemy2>=0.18.0",
+    "h3>=3.7.6",
+    "more-itertools>=10.8.0",
+    "onnxruntime>=1.22.1",
+    "psycopg[binary]>=3.2.10",
+    "pydantic>=2.11.8",
+    "pydantic-settings>=2.10.1",
+    "sqlalchemy>=2.0.43",
+    "numpy==2.2.5",
+    "onnx>=1.19.0",
+    "packaging>=25.0",
+    "pandas==2.2.3",
+    "pyarrow==19.0.1",
+    "safetensors>=0.6.2",
+    "setuptools>=80.9.0",
+    "torch==2.6.0",
+    "tqdm==4.67.1",
+]
