@@ -23,13 +23,13 @@ run-rust-api-server:
 	@docker compose up --build -d rust-api-server
 
 run-python-pytorch-load-tester:
-	@docker compose up --build -d python-pytorch-load-tester
+	@docker compose up --build python-pytorch-load-tester
 
 run-python-onnx-load-tester:
-	@docker compose up --build -d python-onnx-load-tester
+	@docker compose up --build python-onnx-load-tester
 
 run-rust-load-tester:
-	@docker compose up --build -d rust-load-tester
+	@docker compose up --build rust-load-tester
 
 run-load-tester-ui:
 	@uv run --package python-load-tester locust -f python-load-tester/main.py

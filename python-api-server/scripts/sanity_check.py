@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 from src.api.rest.config import config
 from src.api.rest.dtos import feature as feature_dtos
+from src.services.model_service import PyTorchModelService
 
 REQUEST_PATH = Path("data") / "requests.parquet"
 
@@ -27,6 +28,9 @@ def assert_equal(response_1, response_2):
         assert d1["id"] == d2["id"]
         assert round(d1["score"], 2) == round(d2["score"], 2)
         assert int(round(d1["displacement"], 0)) == int(round(d2["displacement"], 0))
+
+
+PyTorchModelService(model_path="data/model.pt")
 
 
 output = [[], [], []]
