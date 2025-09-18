@@ -53,7 +53,7 @@ class ONNXModelService(ModelService):
         self.model_path = model_path
         self.model = onnx.load(self.model_path)
         self.ort_session = onnxruntime.InferenceSession(
-            self.model_path, providers=["CPUExecutionProvider"]
+            self.model_path,
         )
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
