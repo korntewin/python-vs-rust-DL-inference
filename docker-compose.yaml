@@ -240,3 +240,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  sanity-check:
+    build:
+      context: .
+      target: python-api-server
+    entrypoint: |
+      sh -c 'echo "Sanity checking..." && \
+      export PYTHONPATH=/app/python-api-server && \
+      uv run --package python-api-server python3 python-api-server/scripts/sanity_check.py' && \
+      echo "Done"'
+    environment:
+      - PYTHON_PYTORCH_API_SERVER_URL=http://host.docker.internal:8080
+      - PYTHON_ONNX_API_SERVER_URL=http://host.docker.internal:8081
+      - RUST_API_SERVER_URL=http://host.docker.internal:8082
+      - POSTGRES_HOST=postgresql
+    depends_on:
+      - python-pytorch-api-server
+      - python-onnx-api-server
+      - rust-api-server
+    volumes:
+      - ./data/:/app/data/

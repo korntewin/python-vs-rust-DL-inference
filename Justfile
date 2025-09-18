@@ -33,3 +33,6 @@ run-rust-load-tester:
 
 run-load-tester-ui:
 	@uv run --package python-load-tester locust -f python-load-tester/main.py
+
+run-sanity-check:
+	@docker compose up --build sanity-check
