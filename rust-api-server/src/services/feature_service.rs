@@ -1,15 +1,19 @@
 use crate::api::dtos::{Request, Response, Output};
 use crate::services::adapters::GetFeaturePort;
-use crate::services::model_service::ModelService;
+// use crate::services::model_service::ModelService;
+// use candle_core::Tensor;
+use crate::services::model_service_v2::ModelService;
+use burn::Tensor;
 use anyhow::Result;
-use candle_core::Tensor;
 use log::debug;
 use std::sync::Arc;
+
+type TorchBackend = burn_tch::LibTorch;
 
 #[derive(Clone)]
 pub struct FeatureService {
     feature_adapter: Arc<dyn GetFeaturePort>,
-    model_service: ModelService,
+    model_service: ModelService<TorchBackend>,
 }
 
 impl FeatureService {
@@ -36,17 +40,19 @@ impl FeatureService {
             .await?;
         let x = self
             .model_service
-            .transform_feature(&feature_1, &feature_2)?;
+            .transform_feature(&feature_1, &feature_2);
 
-        if x.shape().dim(0).unwrap() == 0 {
+        if x.is_none() {
             return Ok(Response {
                 outputs: vec![],
             });
         }
 
+        let x = x.unwrap();
+
         debug!("x shape: {:?}", x.shape());
-        let y_pred: Tensor = self.model_service.predict(&x)?;
-        let y_pred: Vec<f32> = y_pred.squeeze(1)?.to_vec1::<f32>()?;
+        let y_pred = self.model_service.predict(&x);
+        let y_pred = y_pred.to_data().to_vec()?;
         debug!("y_pred: {:?}", y_pred);
 
         let mut outputs = Vec::new();
@@ -73,5 +79,17 @@ impl FeatureService {
 
         let response = Response { outputs };
         Ok(response)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_feature_service() {
+        let feature_service = FeatureService::new(Arc::new(MockFeatureAdapter::new()), ModelService::new("../data/model.safetensors"));
+        let k = 1;
     }
 }
