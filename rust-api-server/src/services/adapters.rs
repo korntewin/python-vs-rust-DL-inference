@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::services::types::{Feature2Entity, Feature1Entity};
+use crate::services::types::{Feature1Entity, Feature2Entity};
 use anyhow::Result;
 use async_trait::async_trait;
 use diesel::sql_types::{Array, BigInt, Double, Integer};

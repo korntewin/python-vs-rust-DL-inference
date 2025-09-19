@@ -11,7 +11,10 @@ pub async fn process_feature(
     data: State<AppData>,
 ) -> web::HttpResponse {
     let feature_1_id = path.into_inner().0;
-    debug!("Feature request received for feature_1_id: {:?}", feature_1_id);
+    debug!(
+        "Feature request received for feature_1_id: {:?}",
+        feature_1_id
+    );
     let response = data
         .feature_service
         .process_feature(feature_1_id, request.into_inner())

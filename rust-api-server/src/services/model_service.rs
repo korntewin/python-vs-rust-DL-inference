@@ -1,3 +1,6 @@
+/*
+Candle implementation of model service
+*/
 use candle_core::{DType, Device, Result, Tensor};
 use candle_nn::ops::sigmoid;
 use candle_nn::{Linear, Module, VarBuilder, linear};
@@ -48,39 +51,29 @@ impl ModelService {
         sigmoid(&x)
     }
 
-    pub fn transform_feature(
-        &self,
-        feature_1: &[f32],
-        feature_2: &[Vec<f32>],
-    ) -> Result<Tensor> {
+    pub fn transform_feature(&self, feature_1: &[f32], feature_2: &[Vec<f32>]) -> Result<Tensor> {
         let n = feature_2.len();
         let u_dim = feature_1.len();
-        let r_dim = if n > 0 {
-            feature_2[0].len()
-        } else {
-            0
-        };
+        let r_dim = if n > 0 { feature_2[0].len() } else { 0 };
 
         if n == 0 || u_dim == 0 || r_dim == 0 {
             return Tensor::from_vec(Vec::<f32>::new(), (0, u_dim + r_dim), &Device::Cpu);
         }
 
-        // tile user features to have the same batch size as restaurant features
-        let tiled_user: Vec<f32> = feature_2
+        let tiled_f1: Vec<f32> = feature_2
             .iter()
             .flat_map(|_| feature_1.iter().cloned())
             .collect();
-        let user_t = Tensor::from_vec(tiled_user, (n, u_dim), &Device::Cpu)?;
+        let f1 = Tensor::from_vec(tiled_f1, (n, u_dim), &Device::Cpu)?;
 
-        // reshape restaurant features to [n, r_dim]
-        let rest_flat: Vec<f32> = feature_2
+        let tiled_f2: Vec<f32> = feature_2
             .iter()
             .flat_map(|row| row.iter().cloned())
             .collect();
-        let rest_t = Tensor::from_vec(rest_flat, (n, r_dim), &Device::Cpu)?;
+        let f2 = Tensor::from_vec(tiled_f2, (n, r_dim), &Device::Cpu)?;
 
         // hstack
-        let x = Tensor::cat(&[&user_t, &rest_t], 1)?;
+        let x = Tensor::cat(&[&f1, &f2], 1)?;
         Ok(x)
     }
 }

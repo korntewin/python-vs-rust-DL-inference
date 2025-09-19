@@ -1,8 +1,8 @@
 use crate::api::routers::feature::process_feature;
 use crate::config::Config;
 use crate::services::adapters::GetFeatureFromSQLAdapter;
-use crate::services::model_service::ModelService;
 use crate::services::feature_service::FeatureService;
+use crate::services::model_service_v2::ModelService;
 use ntex::web;
 use std::sync::Arc;
 
@@ -19,11 +19,11 @@ async fn health_check() -> web::HttpResponse {
 pub async fn run_api_server(config: Config) -> std::io::Result<()> {
     env_logger::init();
     let feature_adapter = GetFeatureFromSQLAdapter::new(config.clone()).await.unwrap();
-    let model_service = ModelService::new(&config.model_path).unwrap();
-    let recommendation_service = FeatureService::new(Arc::new(feature_adapter), model_service);
+    let model_service = ModelService::new(&config.model_path);
+    let feature_service = FeatureService::new(Arc::new(feature_adapter), model_service);
     let app_data = AppData {
         config: config.clone(),
-        feature_service: recommendation_service,
+        feature_service: feature_service,
     };
     web::HttpServer::new(move || {
         web::App::new()

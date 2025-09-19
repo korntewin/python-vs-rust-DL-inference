@@ -1,38 +1,37 @@
-use burn::{
-    backend::LibTorch, nn::{Linear, LinearConfig, Relu, Sigmoid}, prelude::*,
-    record::{FullPrecisionSettings, Record},
-};
-use burn_import::safetensors::SafetensorsFileRecorder;
-
-type TorchBackend = LibTorch;
+/*
+Burn implementation of model service
+*/
+use burn::nn::{Linear, LinearConfig, Relu, Sigmoid};
+use burn::prelude::*;
+use burn::record::{FullPrecisionSettings, Recorder};
+use burn_import::safetensors::{LoadArgs, SafetensorsFileRecorder};
 
 #[derive(Module, Debug)]
-struct RankNet<B: Backend> {
-    l1: Linear<B>,
-    l2: Linear<B>,
-    l2_relu: Relu,
-    l3: Linear<B>,
-    l3_sigmoid: Sigmoid,
+pub struct RankNet<B: Backend> {
+    linear1: Linear<B>,
+    linear2: Linear<B>,
+    relu: Relu,
+    linear3: Linear<B>,
+    sigmoid: Sigmoid,
 }
 
 impl<B: Backend> RankNet<B> {
-    fn init(device: &B::Device) -> Self {
+    pub fn init(device: &B::Device) -> Self {
         Self {
-            l1: LinearConfig::new(30 + 10, 256).with_bias(true).init(device),
-            l2: LinearConfig::new(256, 128).with_bias(true).init(device),
-            l2_relu: Relu::new(),
-            l3: LinearConfig::new(128, 1).with_bias(true).init(device),
-            l3_sigmoid: Sigmoid::new(),
+            linear1: LinearConfig::new(40, 256).with_bias(true).init(device),
+            linear2: LinearConfig::new(256, 128).with_bias(true).init(device),
+            relu: Relu::new(),
+            linear3: LinearConfig::new(128, 1).with_bias(true).init(device),
+            sigmoid: Sigmoid::new(),
         }
     }
 
-    fn forward(&self, x: Tensor<B, 2>) -> Tensor<B, 1> {
-        let x = self.l1.forward(x);
-        let x = self.l2.forward(x);
-        let x = self.l2_relu.forward(x);
-        let x = self.l3.forward(x);
-        let x = self.l3_sigmoid.forward(x);
-        x
+    pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
+        let x = self.linear1.forward(input);
+        let x = self.linear2.forward(x);
+        let x = self.relu.forward(x);
+        let x = self.linear3.forward(x);
+        self.sigmoid.forward(x)
     }
 }
 
@@ -43,54 +42,49 @@ pub struct ModelService<B: Backend> {
 }
 
 impl<B: Backend> ModelService<B> {
-    pub fn new<B: Backend>(model_path: &str) -> Self<B> {
+    pub fn new(model_path: &str) -> Self {
         let device = Default::default();
-
+        let load_args = LoadArgs::new(model_path.into())
+            .with_key_remap(r"^model.0.(.*)$", "linear1.$1")
+            .with_key_remap(r"^model.1.(.*)$", "linear2.$1")
+            .with_key_remap(r"^model.3.(.*)$", "linear3.$1");
         let record = SafetensorsFileRecorder::<FullPrecisionSettings>::default()
-        .load(model_path, &device)
-        .expect("Failed to load model");
-
-        Self {
-            model: RankNet::<B>::init(&device).load_record(record),
-            device: Default::default(),
-        } 
+            .load(load_args, &device)
+            .expect("Failed to load model");
+        let model = RankNet::<B>::init(&device).load_record(record);
+        Self { model, device }
     }
 
-    pub fn predict(&self, x: Tensor<B, 2>) -> Tensor<B, 1> {
-        self.model.forward(x)
-    }
-    
-    pub fn transform_feature(&self, feature_1: &[f32], feature_2: &[Vec<f32>]) -> Option<Tensor<B, 2>> {
+    pub fn transform_feature(
+        &self,
+        feature_1: &[f32],
+        feature_2: &[Vec<f32>],
+    ) -> Option<Tensor<B, 2>> {
         let n = feature_2.len();
         let u_dim = feature_1.len();
-        let r_dim = if n > 0 {
-            feature_2[0].len()
-        } else {
-            0;
-        };
+        let r_dim = if n > 0 { feature_2[0].len() } else { 0 };
 
         if n == 0 || u_dim == 0 || r_dim == 0 {
             return None;
         }
-        
-        let tiled_user = feature_2
-            .iter()
-            .map(|_| feature_1.iter().cloned())
-            .collect::<Vec<Vec<f32>>>();
-        let user_t = Tensor::from_floats(tiled_user, &self.device);
-        
-        let rest_flat = feature_2
-            .iter()
-            .map(|row| row.iter().cloned())
-            .collect::<Vec<Vec<f32>>>();
-        let rest_t = Tensor::from_floats(rest_flat, &self.device);
-        
-        let x = Tensor::cat(&[&user_t, &rest_t], 1);
-        x
+
+        // Flatten the user features and repeat for each item in feature_2
+        let mut combined_data: Vec<f32> = Vec::new();
+        let rows = feature_2.len();
+        let cols = feature_1.len() + feature_2[0].len();
+
+        for item in feature_2.iter() {
+            combined_data.extend_from_slice(feature_1);
+            combined_data.extend_from_slice(item);
+        }
+
+        // Create tensor from flat data and reshape it to 2D
+        let tensor_data = TensorData::new(combined_data, vec![rows, cols]);
+        let x = Tensor::from_data(tensor_data, &self.device);
+        Some(x)
     }
 
-    pub fn predict(&self, x: Tensor<B, 2>) -> Option<Tensor<B, 1>> {
-        let x = self.model.forward(x);
-        Some(x)
+    pub fn predict(&self, x: &Tensor<B, 2>) -> Tensor<B, 2> {
+        self.model.forward(x.clone())
     }
 }
