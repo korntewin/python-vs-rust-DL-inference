@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.99"
 async-trait = "0.1.89"
-burn = { version = "0.18.0", features = ["tch"] }
+burn = { version = "0.18.0", features = ["candle"] }
 burn-import = "0.18.0"
 burn-ndarray = { version = "0.18.0", features = ["std"] }
 candle-core = "0.9.1"

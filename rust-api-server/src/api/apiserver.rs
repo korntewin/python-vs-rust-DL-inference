@@ -2,7 +2,7 @@ use crate::api::routers::feature::process_feature;
 use crate::config::Config;
 use crate::services::adapters::GetFeatureFromSQLAdapter;
 use crate::services::feature_service::FeatureService;
-use crate::services::model_service_v2::ModelService;
+use crate::services::model_service::ModelService;
 use ntex::web;
 use std::sync::Arc;
 

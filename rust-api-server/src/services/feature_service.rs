@@ -1,21 +1,21 @@
 use crate::api::dtos::{Output, Request, Response};
 use crate::services::adapters::GetFeaturePort;
-use crate::services::model_service_v2::ModelService;
+use crate::services::model_service::ModelService;
 use anyhow::Result;
-use burn::backend::LibTorch;
+use burn::backend::Candle;
 use log::debug;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct FeatureService {
     feature_adapter: Arc<dyn GetFeaturePort>,
-    model_service: ModelService<LibTorch>,
+    model_service: ModelService<Candle>,
 }
 
 impl FeatureService {
     pub fn new(
         feature_adapter: Arc<dyn GetFeaturePort>,
-        model_service: ModelService<LibTorch>,
+        model_service: ModelService<Candle>,
     ) -> Self {
         Self {
             feature_adapter,
