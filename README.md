@@ -51,9 +51,10 @@ Total parameters: `43,521`.
 Use the following commands to reproduce the results:
 
 1. Install [Just]; the project scripts are in the `Justfile`.
-2. Run `just run-python-pytorch-load-tester` to run load testing on Python PyTorch. The results will be stored at `./data/python-pytorch-load-tester-results.csv`.
-3. Run `just run-python-onnx-load-tester` to run load testing on Python ONNX. The results will be stored at `./data/python-onnx-load-tester-results.csv`.
-4. Run `just run-rust-load-tester` to run load testing on Rust Candle. The results will be stored at `./data/rust-load-tester-results.csv`.
+2. Run `just dump-data` to dump mock data into the database.
+3. Run `just run-python-pytorch-load-tester` to run load testing on Python PyTorch. The results will be stored at `./data/python-pytorch-load-tester-results.csv`.
+4. Run `just run-python-onnx-load-tester` to run load testing on Python ONNX. The results will be stored at `./data/python-onnx-load-tester-results.csv`.
+5. Run `just run-rust-load-tester` to run load testing on Rust Candle. The results will be stored at `./data/rust-load-tester-results.csv`.
 
 ## Machine spec
 
